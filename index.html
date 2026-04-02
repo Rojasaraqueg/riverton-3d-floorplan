@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Floor Plan — 2853 W 12075 S, Riverton UT 84065</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;font-family:'Segoe UI',system-ui,Arial,sans-serif}
+canvas{display:block}
+#hud{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#hud>*{pointer-events:auto}
+#title{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92);
+  border:1px solid #ddd;border-radius:10px;padding:8px 22px;font-size:13px;color:#333;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);backdrop-filter:blur(8px);white-space:nowrap}
+#title b{color:#1565C0}
+#panel{position:absolute;top:14px;left:14px;width:200px}
+.card{background:rgba(255,255,255,.94);border:1px solid #e0e0e0;border-radius:10px;
+  padding:14px;margin-bottom:8px;box-shadow:0 2px 10px rgba(0,0,0,.06);backdrop-filter:blur(8px)}
+.card h2{font-size:10px;font-weight:700;color:#1565C0;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.card h3{font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.8px;margin:10px 0 5px}
+.fb{display:flex;align-items:center;width:100%;padding:7px 10px;margin:3px 0;background:#f8f8f8;
+  border:1px solid #e8e8e8;border-radius:7px;color:#555;cursor:pointer;font-size:12px;font-weight:500;transition:.15s}
+.fb:hover{background:#f0f0f0}
+.fb.on{background:#E3F2FD;border-color:#90CAF9;color:#1565C0}
+.fb .dot{width:9px;height:9px;border-radius:50%;margin-right:9px;flex-shrink:0}
+.fb.on .dot{box-shadow:0 0 5px currentColor}
+.vb{padding:5px 10px;margin:2px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:5px;
+  color:#777;cursor:pointer;font-size:10px;font-weight:600;transition:.15s}
+.vb:hover{background:#e8e8e8}
+.vb.on{background:#E3F2FD;border-color:#90CAF9;color:#1565C0}
+.sr{display:flex;align-items:center;margin:5px 0;gap:6px}
+.sr label{font-size:11px;color:#888;min-width:60px}
+.sr input[type=range]{flex:1;accent-color:#1565C0;height:3px}
+#info{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.88);
+  border:1px solid #ddd;border-radius:8px;padding:6px 16px;color:#999;font-size:10px;
+  box-shadow:0 1px 6px rgba(0,0,0,.06)}
+#rinfo{position:absolute;bottom:14px;right:14px;background:rgba(255,255,255,.95);border:1px solid #90CAF9;
+  border-radius:10px;padding:12px 16px;color:#333;font-size:12px;display:none;min-width:170px;
+  box-shadow:0 2px 12px rgba(0,0,0,.1)}
+#rinfo h4{color:#1565C0;margin-bottom:3px;font-size:14px;font-weight:700}
+#rinfo .d{color:#777;font-size:11px;margin:1px 0}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="title"><b>2853 W 12075 S, Riverton, UT 84065</b> — Habitat Builders / FastDesign</div>
+  <div id="panel">
+    <div class="card">
+      <h2>Pisos</h2>
+      <button class="fb on" id="b-bsmt" onclick="tog('bsmt')"><div class="dot" style="background:#78909C;color:#78909C"></div>Basement</button>
+      <button class="fb on" id="b-main" onclick="tog('main')"><div class="dot" style="background:#4CAF50;color:#4CAF50"></div>Main Floor</button>
+      <button class="fb on" id="b-upper" onclick="tog('upper')"><div class="dot" style="background:#1E88E5;color:#1E88E5"></div>Upper Floor</button>
+      <button class="fb" id="b-roof" onclick="tog('roof')"><div class="dot" style="background:#795548;color:#795548"></div>Roof</button>
+      <h3>Vista</h3>
+      <div>
+        <button class="vb on" id="v-3d" onclick="vw('3d')">3D</button>
+        <button class="vb" id="v-top" onclick="vw('top')">Planta</button>
+        <button class="vb" id="v-front" onclick="vw('front')">Frente</button>
+        <button class="vb" id="v-right" onclick="vw('right')">Lateral</button>
+      </div>
+      <h3>Ajustes</h3>
+      <div class="sr"><label>Opacidad</label><input type="range" min="5" max="100" value="75" oninput="opac(this.value/100)"></div>
+      <div class="sr"><label>Separar</label><input type="range" min="0" max="100" value="0" oninput="explode(this.value/100)"></div>
+      <div style="margin-top:6px">
+        <button class="vb" onclick="resetCam()">Reset</button>
+        <button class="vb" onclick="wire()">Wireframe</button>
+        <button class="vb" onclick="solo()">Solo Piso</button>
+      </div>
+    </div>
+    <div class="card" style="font-size:10px;color:#aaa">
+      <b style="color:#666">Escala real 1:1 (pies)</b><br>
+      Paredes: 8' alto | Dims: del plano A-1.0 / A-2.0<br>
+      Teclas: 1-4 pisos | R reset | W wire | T top
+    </div>
+  </div>
+  <div id="info">Orbitar: Click Izq &nbsp;|&nbsp; Pan: Click Der &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Click cuarto = info</div>
+  <div id="rinfo"><h4 id="rn"></h4><div class="d" id="rd"></div><div class="d" id="ra"></div><div class="d" id="rf"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* ══════════════════ CONFIG ══════════════════ */
+const WH=8, EWT=.5, IWT=.25, DOOR_H=6.67, DOOR_W=2.83;
+const CENTER=new THREE.Vector3(16,5,14);
+
+/* ══════════════════ PROCEDURAL TEXTURES ══════════════════ */
+function mkTex(fn,rep){const c=document.createElement('canvas');c.width=c.height=256;fn(c.getContext('2d'),256);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(rep)t.repeat.set(rep,rep);return t;}
+
+const T_wood=mkTex((g,s)=>{
+  g.fillStyle='#C9A87C';g.fillRect(0,0,s,s);
+  for(let y=0;y<s;y+=32){g.fillStyle='#B8956A';g.fillRect(0,y,s,1.5);
+    for(let i=0;i<25;i++){const gy=y+Math.random()*30;
+      g.strokeStyle=`rgba(139,100,60,${.04+Math.random()*.08})`;g.lineWidth=.8;g.beginPath();
+      let cx=0;g.moveTo(0,gy);while(cx<s){cx+=15+Math.random()*30;g.lineTo(cx,gy+(Math.random()-.5)*2);}g.stroke();}}
+},3);
+
+const T_tile=mkTex((g,s)=>{
+  const ts=32;g.fillStyle='#ddd';g.fillRect(0,0,s,s);
+  for(let y=0;y<s;y+=ts)for(let x=0;x<s;x+=ts){
+    const v=235+Math.random()*15;g.fillStyle=`rgb(${v},${v},${v+3})`;g.fillRect(x+1,y+1,ts-2,ts-2);}
+  g.fillStyle='#c5c5c5';for(let i=0;i<=s;i+=ts){g.fillRect(i-.5,0,1,s);g.fillRect(0,i-.5,s,1);}
+},4);
+
+const T_carpet=mkTex((g,s)=>{
+  for(let y=0;y<s;y++)for(let x=0;x<s;x++){const n=Math.random()*12;
+    g.fillStyle=`rgb(${190+n},${185+n},${175+n})`;g.fillRect(x,y,1,1);}
+},5);
+
+const T_conc=mkTex((g,s)=>{
+  g.fillStyle='#b8b8b8';g.fillRect(0,0,s,s);
+  for(let i=0;i<3000;i++){g.fillStyle=`rgba(${Math.random()>0.5?140:170},${Math.random()>0.5?140:170},${Math.random()>0.5?140:170},.15)`;
+    g.fillRect(Math.random()*s,Math.random()*s,1+Math.random()*2,1+Math.random()*2);}
+},3);
+
+const T_grass=mkTex((g,s)=>{
+  g.fillStyle='#5a8a4a';g.fillRect(0,0,s,s);
+  for(let i=0;i<4000;i++){const sh=50+Math.random()*40;
+    g.fillStyle=`rgb(${sh},${80+Math.random()*45},${sh-15})`;g.fillRect(Math.random()*s,Math.random()*s,1+Math.random(),3+Math.random()*4);}
+},15);
+
+/* ══════════════════ MATERIALS ══════════════════ */
+const M={
+  extWall:new THREE.MeshStandardMaterial({color:0xF5F0E6,roughness:.82,metalness:.01}),
+  intWall:new THREE.MeshStandardMaterial({color:0xFAF6EE,roughness:.85,metalness:0,transparent:true,opacity:.75,side:THREE.DoubleSide}),
+  glass:new THREE.MeshPhysicalMaterial({color:0x88ccee,transparent:true,opacity:.25,roughness:0,metalness:.1,side:THREE.DoubleSide}),
+  frame:new THREE.MeshStandardMaterial({color:0xffffff,roughness:.35,metalness:.05}),
+  doorFrame:new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.45,metalness:.05}),
+  doorPanel:new THREE.MeshStandardMaterial({color:0x8D6E63,roughness:.5,metalness:.03}),
+  wood:new THREE.MeshStandardMaterial({map:T_wood,roughness:.55,metalness:.03}),
+  tile:new THREE.MeshStandardMaterial({map:T_tile,roughness:.25,metalness:.08}),
+  carpet:new THREE.MeshStandardMaterial({map:T_carpet,roughness:.92,metalness:0}),
+  conc:new THREE.MeshStandardMaterial({map:T_conc,roughness:.88,metalness:0}),
+  edge:new THREE.LineBasicMaterial({color:0x333333,transparent:true,opacity:.2}),
+};
+const floorMat={wood:M.wood,tile:M.tile,carpet:M.carpet,conc:M.conc};
+const intWallMats=[];
+
+/* ══════════════════ ROOM DATA (real dims from plans) ══════════════════ */
+/* A-1.0 dims: South wall 11'-0½" + 12'-0½" ≈ 23.1'. Upper floor width ~31'.
+   Garage door 16'x7'. Doors per schedule. Scale 1/4"=1'-0" */
+const DATA={
+  bsmt:{label:'Basement',elev:-9,
+    rooms:[
+      {n:'Open Space',      x:0,  z:16, w:24,  d:12,  f:'conc'},
+      {n:'Stairs',          x:12, z:12, w:7,   d:4,   f:'wood',stairs:1},
+      {n:'Mechanical Room', x:12, z:5,  w:7,   d:7,   f:'conc'},
+      {n:'Hall',            x:7,  z:5,  w:5,   d:11,  f:'conc'},
+      {n:'Unfinished Room', x:0,  z:0,  w:7,   d:16,  f:'conc'},
+      {n:'Bedroom',         x:7,  z:0,  w:12,  d:5,   f:'carpet'},
+      {n:'W.I.C.',          x:19, z:0,  w:5,   d:16,  f:'carpet'},
+    ],
+    ext:[
+      {a:'x',x:0,z:0,l:24,ops:[{at:14,w:4,h:2.8,s:5,t:'w'}]},
+      {a:'z',x:24,z:0,l:28,ops:[]},
+      {a:'x',x:0,z:28,l:24,ops:[]},
+      {a:'z',x:0,z:0,l:28,ops:[{at:5,w:4,h:2.8,s:5,t:'w'}]},
+    ]
+  },
+  main:{label:'Main Floor',elev:0,
+    rooms:[
+      {n:'Kitchen',       x:0,    z:0,    w:11,   d:10.5, f:'tile'},
+      {n:'Living Room',   x:11,   z:0,    w:20,   d:10.5, f:'wood'},
+      {n:'Pantry',        x:11,   z:10.5, w:4,    d:3,    f:'tile'},
+      {n:'Dining',        x:0,    z:10.5, w:11,   d:7.5,  f:'wood'},
+      {n:'Stairs',        x:15,   z:10.5, w:4,    d:7.5,  f:'wood',stairs:1},
+      {n:'Hall',          x:11,   z:13.5, w:4,    d:4.5,  f:'wood'},
+      {n:'Family Living', x:0,    z:18,   w:11,   d:10,   f:'carpet'},
+      {n:'HVAC / Closet', x:11,   z:18,   w:8,    d:4,    f:'conc'},
+      {n:'Laundry',       x:11,   z:22,   w:8,    d:6,    f:'tile'},
+      {n:'Garage',        x:19,   z:14,   w:18,   d:14,   f:'conc'},
+      {n:'Entry',         x:19,   z:10.5, w:12,   d:3.5,  f:'tile'},
+    ],
+    ext:[
+      {a:'x',x:0,z:0,l:31, ops:[{at:5.5,w:3.5,h:3.5,s:2.5,t:'w'},{at:15,w:3,h:DOOR_H,s:0,t:'d'},{at:21.5,w:4,h:3.5,s:2.5,t:'w'},{at:27,w:4,h:3.5,s:2.5,t:'w'}]},
+      {a:'z',x:31,z:0,l:14, ops:[{at:5.5,w:4,h:3.5,s:2.5,t:'w'},{at:12,w:2.5,h:3,s:3,t:'w'}]},
+      {a:'x',x:31,z:14,l:6, ops:[{at:3,w:3,h:DOOR_H,s:0,t:'d'}]},
+      {a:'z',x:37,z:14,l:14,ops:[{at:4,w:3,h:2.5,s:4,t:'w'}]},
+      {a:'x',x:0,z:28,l:37, ops:[{at:5.5,w:6,h:6.5,s:.5,t:'w'},{at:15,w:2.5,h:2.5,s:4.5,t:'w'},{at:28,w:16,h:7,s:0,t:'d'}]},
+      {a:'z',x:0,z:0,l:28,  ops:[{at:5,w:3,h:3.5,s:2.5,t:'w'},{at:14,w:3,h:3.5,s:2.5,t:'w'},{at:23,w:4,h:3.5,s:2.5,t:'w'}]},
+    ]
+  },
+  upper:{label:'Upper Floor',elev:9,
+    rooms:[
+      {n:'Bedroom 3',      x:0,  z:0,  w:11,  d:12,  f:'carpet'},
+      {n:'Closet',         x:11, z:0,  w:9,   d:6,   f:'carpet'},
+      {n:'Master Bath',    x:20, z:0,  w:17,  d:12,  f:'tile'},
+      {n:'Bath',           x:0,  z:12, w:11,  d:6,   f:'tile'},
+      {n:'Hall',           x:11, z:6,  w:9,   d:12,  f:'wood'},
+      {n:'Master Closet',  x:20, z:12, w:17,  d:6,   f:'carpet'},
+      {n:'Bedroom 2',      x:0,  z:18, w:11,  d:10,  f:'carpet'},
+      {n:'Closet 2',       x:11, z:18, w:9,   d:4,   f:'carpet'},
+      {n:'W.I.C.',         x:11, z:22, w:9,   d:6,   f:'carpet'},
+      {n:'Master Bedroom', x:20, z:18, w:17,  d:10,  f:'carpet'},
+    ],
+    ext:[
+      {a:'x',x:0,z:0,l:37, ops:[{at:5.5,w:4,h:3.5,s:2.5,t:'w'},{at:28,w:5,h:4,s:2,t:'w'}]},
+      {a:'z',x:37,z:0,l:28,ops:[{at:6,w:3,h:2.5,s:4,t:'w'},{at:23,w:5,h:4,s:2,t:'w'}]},
+      {a:'x',x:0,z:28,l:37,ops:[{at:5.5,w:4,h:3.5,s:2.5,t:'w'},{at:30,w:5,h:4,s:2,t:'w'}]},
+      {a:'z',x:0,z:0,l:28, ops:[{at:6,w:3,h:3.5,s:2.5,t:'w'},{at:15,w:2,h:2,s:4.5,t:'w'},{at:23,w:3,h:3.5,s:2.5,t:'w'}]},
+    ]
+  }
+};
+
+/* ══════════════════ THREE.JS SETUP ══════════════════ */
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.1,600);
+camera.position.set(55,38,55);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+renderer.outputEncoding=THREE.sRGBEncoding;
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+
+const ctrl=new THREE.OrbitControls(camera,renderer.domElement);
+ctrl.enableDamping=true;ctrl.dampingFactor=.06;ctrl.target.copy(CENTER);
+ctrl.minDistance=5;ctrl.maxDistance=160;ctrl.maxPolarAngle=Math.PI*.49;ctrl.update();
+
+/* ══════════════════ SKY ══════════════════ */
+const skyGeo=new THREE.SphereGeometry(250,32,32);
+const skyMat=new THREE.ShaderMaterial({
+  vertexShader:`varying vec3 vWP;void main(){vWP=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vWP;void main(){float h=normalize(vWP).y;
+    vec3 sky=mix(vec3(.78,.85,.92),vec3(.38,.58,.88),clamp(h*2.,0.,1.));
+    vec3 hz=vec3(.88,.91,.95);sky=mix(hz,sky,smoothstep(0.,.15,h));
+    vec3 gnd=vec3(.55,.65,.5);gl_FragColor=vec4(mix(gnd,sky,smoothstep(-.02,.02,h)),1.);}`,
+  side:THREE.BackSide});
+scene.add(new THREE.Mesh(skyGeo,skyMat));
+
+/* ══════════════════ LIGHTS ══════════════════ */
+scene.add(new THREE.AmbientLight(0xffffff,.4));
+scene.add(new THREE.HemisphereLight(0x87CEEB,0x8B7355,.35));
+const sun=new THREE.DirectionalLight(0xFFF5E0,.9);
+sun.position.set(35,55,30);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-35,right:45,top:40,bottom:-15,near:1,far:160});
+sun.shadow.bias=-.0008;scene.add(sun);
+const fill=new THREE.DirectionalLight(0xC0D0E0,.2);fill.position.set(-25,15,-20);scene.add(fill);
+
+/* ══════════════════ GROUND ══════════════════ */
+const gnd=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({map:T_grass,roughness:.92}));
+gnd.rotation.x=-Math.PI/2;gnd.position.y=-.15;gnd.receiveShadow=true;scene.add(gnd);
+// Driveway
+const drv=new THREE.Mesh(new THREE.PlaneGeometry(18,25),new THREE.MeshStandardMaterial({color:0x999999,roughness:.75}));
+drv.rotation.x=-Math.PI/2;drv.position.set(28,-.08,40);drv.receiveShadow=true;scene.add(drv);
+// Sidewalk
+const sw=new THREE.Mesh(new THREE.PlaneGeometry(26,4),new THREE.MeshStandardMaterial({color:0xbbb,roughness:.7}));
+sw.rotation.x=-Math.PI/2;sw.position.set(15.5,-.1,-3);sw.receiveShadow=true;scene.add(sw);
+
+/* ══════════════════ HELPERS ══════════════════ */
+function box(w,h,d,x,y,z,mat,grp){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;grp.add(m);return m;}
+function edg(geo,pos,grp){const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo),M.edge);e.position.copy(pos);grp.add(e);}
+function xSeg(x,z,len,elev,h,thick,mat,grp){
+  if(len<.05)return;const g=new THREE.BoxGeometry(len,h,thick);
+  const m=new THREE.Mesh(g,mat);m.position.set(x+len/2,elev+h/2,z);m.castShadow=true;m.receiveShadow=true;grp.add(m);edg(g,m.position,grp);return m;}
+function zSeg(x,z,len,elev,h,thick,mat,grp){
+  if(len<.05)return;const g=new THREE.BoxGeometry(thick,h,len);
+  const m=new THREE.Mesh(g,mat);m.position.set(x,elev+h/2,z+len/2);m.castShadow=true;m.receiveShadow=true;grp.add(m);edg(g,m.position,grp);return m;}
+
+function buildWallWithOps(axis,startX,startZ,totalLen,elev,thick,mat,ops,grp){
+  const fn=axis==='x'?xSeg:zSeg;
+  const sx=axis==='x'?startX:startX;
+  const sz=axis==='x'?startZ:startZ;
+  let cursor=0;
+  const sorted=ops.slice().sort((a,b)=>a.at-b.at);
+  sorted.forEach(op=>{
+    const L=op.at-op.w/2, R=op.at+op.w/2;
+    if(L>cursor+.05) fn(axis==='x'?sx+cursor:sx, axis==='x'?sz:sz+cursor, L-cursor, elev, WH, thick, mat, grp);
+    const sill=op.s||0;
+    if(sill>.05) fn(axis==='x'?sx+L:sx, axis==='x'?sz:sz+L, op.w, elev, sill, thick, mat, grp);
+    const top=sill+op.h;
+    if(top<WH-.05) fn(axis==='x'?sx+L:sx, axis==='x'?sz:sz+L, op.w, elev+top, WH-top, thick, mat, grp);
+    // Glass / frame
+    if(op.t==='w'){
+      const gw=op.w-.3,gh=op.h-.3;
+      const pg=new THREE.PlaneGeometry(axis==='x'?gw:gh, axis==='x'?gh:gw);
+      const gm=new THREE.Mesh(pg,M.glass);
+      if(axis==='x'){gm.position.set(sx+op.at,elev+sill+op.h/2,sz);}
+      else{gm.rotation.y=Math.PI/2;gm.position.set(sx,elev+sill+op.h/2,sz+op.at);}
+      grp.add(gm);
+      // Frame
+      const ft=.1,fd=thick+.15;
+      if(axis==='x'){
+        box(op.w+.15,ft,fd, sx+op.at,elev+sill+op.h,sz, M.frame,grp);
+        box(op.w+.15,ft,fd, sx+op.at,elev+sill,sz, M.frame,grp);
+        box(ft,op.h,fd, sx+L,elev+sill+op.h/2,sz, M.frame,grp);
+        box(ft,op.h,fd, sx+R,elev+sill+op.h/2,sz, M.frame,grp);
+      }else{
+        box(fd,ft,op.w+.15, sx,elev+sill+op.h,sz+op.at, M.frame,grp);
+        box(fd,ft,op.w+.15, sx,elev+sill,sz+op.at, M.frame,grp);
+        box(fd,op.h,ft, sx,elev+sill+op.h/2,sz+L, M.frame,grp);
+        box(fd,op.h,ft, sx,elev+sill+op.h/2,sz+R, M.frame,grp);
+      }
+    }
+    if(op.t==='d'){
+      const ft=.12;
+      if(axis==='x'){
+        box(op.w+.2,ft,thick+.1,sx+op.at,elev+op.h,sz,M.doorFrame,grp);
+        box(ft,op.h,thick+.1,sx+L-.06,elev+op.h/2,sz,M.doorFrame,grp);
+        box(ft,op.h,thick+.1,sx+R+.06,elev+op.h/2,sz,M.doorFrame,grp);
+      }else{
+        box(thick+.1,ft,op.w+.2,sx,elev+op.h,sz+op.at,M.doorFrame,grp);
+        box(thick+.1,op.h,ft,sx,elev+op.h/2,sz+L-.06,M.doorFrame,grp);
+        box(thick+.1,op.h,ft,sx,elev+op.h/2,sz+R+.06,M.doorFrame,grp);
+      }
+    }
+    cursor=R;
+  });
+  if(totalLen>cursor+.05) fn(axis==='x'?sx+cursor:sx, axis==='x'?sz:sz+cursor, totalLen-cursor, elev, WH, thick, mat, grp);
+}
+
+/* ══════════════════ LABEL ══════════════════ */
+function mkLabel(text,pos,sz){
+  const c=document.createElement('canvas'),g=c.getContext('2d');
+  const fs=sz||18,pad=5;g.font=`600 ${fs}px 'Segoe UI',Arial`;
+  const tw=g.measureText(text).width;c.width=tw+pad*2;c.height=fs+pad*2;
+  g.fillStyle='rgba(255,255,255,.88)';g.fillRect(0,0,c.width,c.height);
+  g.strokeStyle='rgba(0,0,0,.1)';g.lineWidth=1;g.strokeRect(.5,.5,c.width-1,c.height-1);
+  g.font=`600 ${fs}px 'Segoe UI',Arial`;g.fillStyle='#444';g.textAlign='center';g.textBaseline='middle';
+  g.fillText(text,c.width/2,c.height/2);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+  const sc=.04;sp.scale.set(c.width*sc,c.height*sc,1);sp.position.copy(pos);return sp;}
+
+/* ══════════════════ STAIRS GEOMETRY ══════════════════ */
+function mkStairs(r,elev,grp){
+  const steps=13,sh=WH/steps,sd=r.d/steps;
+  const sm=new THREE.MeshStandardMaterial({color:0xBCAAA4,roughness:.5});
+  for(let i=0;i<steps;i++){const g=new THREE.BoxGeometry(r.w*.82,sh*.85,sd*.88);
+    const m=new THREE.Mesh(g,sm);m.position.set(r.x+r.w/2,elev+(i+.5)*sh,r.z+(i+.5)*sd);
+    m.castShadow=true;m.receiveShadow=true;grp.add(m);}
+  // Rails
+  const rm=new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.4,metalness:.15});
+  box(.12,WH-.5,r.d,r.x+r.w*.1,elev+WH/2-.25,r.z+r.d/2,rm,grp);
+  box(.12,WH-.5,r.d,r.x+r.w*.9,elev+WH/2-.25,r.z+r.d/2,rm,grp);
+}
+
+/* ══════════════════ BUILD FLOORS ══════════════════ */
+const groups={};const clickable=[];
+
+Object.keys(DATA).forEach(k=>{
+  const def=DATA[k],grp=new THREE.Group();grp.userData={key:k,label:def.label,elev:def.elev};
+
+  // Room slabs + interior walls + labels
+  def.rooms.forEach(r=>{
+    // Floor slab
+    const fg=new THREE.PlaneGeometry(r.w,r.d);
+    const fm=new THREE.Mesh(fg,floorMat[r.f]||M.conc);
+    fm.rotation.x=-Math.PI/2;fm.position.set(r.x+r.w/2,def.elev+.02,r.z+r.d/2);
+    fm.receiveShadow=true;fm.userData={name:r.n,w:r.w,d:r.d,floor:def.label};
+    grp.add(fm);clickable.push(fm);
+    // Floor edge
+    const fe=new THREE.LineSegments(new THREE.EdgesGeometry(fg),new THREE.LineBasicMaterial({color:0x666666,transparent:true,opacity:.3}));
+    fe.rotation.x=-Math.PI/2;fe.position.set(r.x+r.w/2,def.elev+.03,r.z+r.d/2);grp.add(fe);
+
+    // Interior walls (thin, transparent, with centered door opening)
+    const im=M.intWall.clone();intWallMats.push(im);
+    // North
+    intWallX(r.x,r.z+r.d,r.w,def.elev,im,grp);
+    // South
+    intWallX(r.x,r.z,r.w,def.elev,im,grp);
+    // East
+    intWallZ(r.x+r.w,r.z,r.d,def.elev,im,grp);
+    // West
+    intWallZ(r.x,r.z,r.d,def.elev,im,grp);
+
+    // Label
+    grp.add(mkLabel(r.n,new THREE.Vector3(r.x+r.w/2,def.elev+WH*.4,r.z+r.d/2)));
+    // Dim label
+    const dl=mkLabel(r.w+"' × "+r.d+"'",new THREE.Vector3(r.x+r.w/2,def.elev+.3,r.z+r.d/2),12);
+    grp.add(dl);
+
+    // Stairs
+    if(r.stairs) mkStairs(r,def.elev,grp);
+  });
+
+  // Exterior walls
+  if(def.ext) def.ext.forEach(w=>{
+    buildWallWithOps(w.a,w.x,w.z,w.l,def.elev,EWT,M.extWall,w.ops||[],grp);
+  });
+
+  groups[k]=grp;scene.add(grp);
+});
+
+function intWallX(x,z,len,elev,mat,grp){
+  if(len<1.5){xSeg(x,z,len,elev,WH,IWT,mat,grp);return;}
+  const dc=len/2,dw=Math.min(DOOR_W,len*.6),dh=DOOR_H;
+  const L=dc-dw/2,R=len-(dc+dw/2);
+  if(L>.05) xSeg(x,z,L,elev,WH,IWT,mat,grp);
+  if(R>.05) xSeg(x+dc+dw/2,z,R,elev,WH,IWT,mat,grp);
+  xSeg(x+dc-dw/2,z,dw,elev+dh,WH-dh,IWT,mat,grp);
+}
+function intWallZ(x,z,len,elev,mat,grp){
+  if(len<1.5){zSeg(x,z,len,elev,WH,IWT,mat,grp);return;}
+  const dc=len/2,dw=Math.min(DOOR_W,len*.6),dh=DOOR_H;
+  const L=dc-dw/2,R=len-(dc+dw/2);
+  if(L>.05) zSeg(x,z,L,elev,WH,IWT,mat,grp);
+  if(R>.05) zSeg(x,z+dc+dw/2,R,elev,WH,IWT,mat,grp);
+  zSeg(x,z+dc-dw/2,dw,elev+dh,WH-dh,IWT,mat,grp);
+}
+
+/* ══════════════════ ROOF ══════════════════ */
+const roofGrp=new THREE.Group();
+(function(){
+  const rm=new THREE.MeshStandardMaterial({color:0x6D4C41,roughness:.75,metalness:.05,side:THREE.DoubleSide});
+  const peakH=6,ex=37,ez=28,elev=17.5;
+  // Main ridge along Z
+  const shape=new THREE.Shape();
+  shape.moveTo(-ex/2,0);shape.lineTo(0,peakH);shape.lineTo(ex/2,0);shape.closePath();
+  const rg=new THREE.ExtrudeGeometry(shape,{depth:ez,bevelEnabled:false});
+  const roof=new THREE.Mesh(rg,rm);roof.position.set(ex/2,elev,0);roof.castShadow=true;
+  roofGrp.add(roof);
+  // Ridge line
+  const rl=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(ex/2,elev+peakH,-.5),new THREE.Vector3(ex/2,elev+peakH,ez+.5)]),
+    new THREE.LineBasicMaterial({color:0x3E2723}));
+  roofGrp.add(rl);
+  // Fascia
+  box(ex+1,.3,.4,ex/2,elev+.15,-.2,new THREE.MeshStandardMaterial({color:0xF5F0E6,roughness:.5}),roofGrp);
+  box(ex+1,.3,.4,ex/2,elev+.15,ez+.2,new THREE.MeshStandardMaterial({color:0xF5F0E6,roughness:.5}),roofGrp);
+})();
+roofGrp.visible=false;
+groups.roof=roofGrp;scene.add(roofGrp);
+
+/* ══════════════════ FURNITURE ══════════════════ */
+(function(){const g=groups.main;
+  // Kitchen island
+  box(5,3,2.2, 5.5,1.5,5, new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.4}),g);
+  box(5.2,.12,2.4, 5.5,3.06,5, new THREE.MeshStandardMaterial({color:0x90A4AE,roughness:.15,metalness:.25}),g);
+  // Living sofa
+  const sf=new THREE.MeshStandardMaterial({color:0x5C4033,roughness:.7});
+  box(7,2.2,2.8, 21,1.1,5.5, sf,g);box(7,1.2,.4, 21,2.4,7.1, sf,g);
+  box(.4,1.2,2.8, 17.1,2.4,5.5, sf,g);box(.4,1.2,2.8, 24.9,2.4,5.5, sf,g);
+  // Coffee table
+  box(3.5,1,.18, 21,.5,3, new THREE.MeshStandardMaterial({color:0x4E342E,roughness:.3,metalness:.1}),g);
+  box(.15,.5,.15,19.5,.25,3.3,M.doorFrame,g);box(.15,.5,.15,22.5,.25,3.3,M.doorFrame,g);
+  box(.15,.5,.15,19.5,.25,2.7,M.doorFrame,g);box(.15,.5,.15,22.5,.25,2.7,M.doorFrame,g);
+  // Dining table (round)
+  const tg=new THREE.CylinderGeometry(2.2,2.2,.12,24);
+  const tm=new THREE.Mesh(tg,new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.3}));
+  tm.position.set(5.5,2.5,14.5);tm.castShadow=true;g.add(tm);
+  const lg=new THREE.CylinderGeometry(.15,.25,2.38,8);
+  const lm=new THREE.Mesh(lg,M.doorFrame);lm.position.set(5.5,1.25,14.5);g.add(lm);
+  // Chairs
+  const cm=new THREE.MeshStandardMaterial({color:0x795548,roughness:.5});
+  for(let a=0;a<6;a++){const ang=a/6*Math.PI*2;
+    box(1.1,1.3,1.1, 5.5+Math.cos(ang)*3,0.65,14.5+Math.sin(ang)*3, cm,g);}
+  // Family sofa
+  box(7,2,2.8, 5.5,1,24, sf,g);box(7,1.2,.4, 5.5,2.2,25.6, sf,g);
+  box(2.8,2,4, 9.6,1,26.4, sf,g);
+  // Washer/Dryer
+  const wm=new THREE.MeshStandardMaterial({color:0xECEFF1,roughness:.2,metalness:.25});
+  box(2.2,2.8,2.2, 12.5,1.4,25, wm,g);box(2.2,2.8,2.2, 12.5,1.4,27.2, wm,g);
+  // Car in garage
+  const carM=new THREE.MeshStandardMaterial({color:0x37474F,roughness:.25,metalness:.6});
+  box(5.5,2.8,13, 28,1.4,21, carM,g);box(5,1.8,6, 28,3.6,20, carM,g);
+  const whl=new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.8});
+  const wg=new THREE.CylinderGeometry(1.1,1.1,.4,12);
+  [[25.5,.55,16],[30.5,.55,16],[25.5,.55,26],[30.5,.55,26]].forEach(p=>{
+    const w=new THREE.Mesh(wg,whl);w.position.set(p[0],p[1],p[2]);w.rotation.z=Math.PI/2;g.add(w);});
+})();
+
+// Upper floor furniture
+(function(){const g=groups.upper;
+  const bm=new THREE.MeshStandardMaterial({color:0x795548,roughness:.5});
+  const mm=new THREE.MeshStandardMaterial({color:0xE8EAF6,roughness:.7});
+  const pm=new THREE.MeshStandardMaterial({color:0xFFF9C4,roughness:.8});
+  function bed(x,z,w,d){box(w,1,d,x,0.5,z,bm,g);box(w-.3,.5,d-.3,x,1.3,z,mm,g);
+    box(w*.4,.25,.8,x-w*.2,1.6,z+d/2-.5,pm,g);box(w*.4,.25,.8,x+w*.2,1.6,z+d/2-.5,pm,g);}
+  bed(5.5,5, 5,6.5);    // Bedroom 3
+  bed(5.5,24,5,6.5);    // Bedroom 2
+  bed(30,24, 6,7);       // Master
+  // Bathtubs
+  box(2.3,1.6,5, 2,0.8+9,15, new THREE.MeshStandardMaterial({color:0xECEFF1,roughness:.12,metalness:.15}),g);
+  box(2.3,1.6,5, 30,0.8+9,6, new THREE.MeshStandardMaterial({color:0xECEFF1,roughness:.12,metalness:.15}),g);
+  // Toilets
+  box(1,1,1.3, 7,0.5+9,17.5, new THREE.MeshStandardMaterial({color:0xfafafa,roughness:.08}),g);
+  box(1,1,1.3, 25,0.5+9,10, new THREE.MeshStandardMaterial({color:0xfafafa,roughness:.08}),g);
+  // Vanities
+  box(4,2.8,.5, 8,1.4+9,12.2, new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.4}),g);
+  box(5,2.8,.5, 25,1.4+9,.2, new THREE.MeshStandardMaterial({color:0x5D4037,roughness:.4}),g);
+})();
+
+// Basement furniture
+(function(){const g=groups.bsmt;
+  // Bed
+  const bm=new THREE.MeshStandardMaterial({color:0x795548,roughness:.5});
+  box(5,1,4, 13,0.5-9,2, bm,g);
+  box(4.7,.5,3.7, 13,1.3-9,2, new THREE.MeshStandardMaterial({color:0xC5CAE9,roughness:.7}),g);
+  // Water heater
+  const wh=new THREE.Mesh(new THREE.CylinderGeometry(.9,.9,3.5,12),new THREE.MeshStandardMaterial({color:0xB0BEC5,roughness:.4,metalness:.25}));
+  wh.position.set(15,-7.25,8);wh.castShadow=true;g.add(wh);
+  // Furnace
+  box(2.2,3.5,2.2, 17.5,-7.25,8, new THREE.MeshStandardMaterial({color:0x90A4AE,roughness:.5,metalness:.2}),g);
+})();
+
+/* ══════════════════ INTERACTION ══════════════════ */
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
+let hlObj=null;
+renderer.domElement.addEventListener('click',e=>{
+  mouse.x=(e.clientX/innerWidth)*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;
+  ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(clickable);
+  if(hlObj){hlObj.material.emissive.setHex(0);hlObj=null;}
+  const ri=document.getElementById('rinfo');
+  if(hits.length){const d=hits[0].object.userData;
+    document.getElementById('rn').textContent=d.name;
+    document.getElementById('rd').textContent=d.w+"' × "+d.d+"'";
+    document.getElementById('ra').textContent=(d.w*d.d).toFixed(0)+' sq ft';
+    document.getElementById('rf').textContent=d.floor;
+    ri.style.display='block';
+    hits[0].object.material.emissive=new THREE.Color(0x222222);hlObj=hits[0].object;
+  }else ri.style.display='none';
+});
+
+/* ══════════════════ UI ══════════════════ */
+window.tog=function(k){const g=groups[k];g.visible=!g.visible;
+  document.getElementById('b-'+k).classList.toggle('on');};
+
+window.vw=function(t){document.querySelectorAll('.vb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('v-'+t).classList.add('on');
+  const c=CENTER.clone();
+  switch(t){
+    case'3d':camera.position.set(55,38,55);break;
+    case'top':camera.position.set(18,60,14.1);break;
+    case'front':camera.position.set(18,10,-22);break;
+    case'right':camera.position.set(-22,10,14);break;
+  }ctrl.target.copy(c);ctrl.update();};
+
+window.opac=function(v){intWallMats.forEach(m=>m.opacity=v);M.intWall.opacity=v;};
+
+window.explode=function(v){
+  const o={bsmt:-v*14,main:0,upper:v*14};
+  Object.entries(o).forEach(([k,d])=>groups[k]&&(groups[k].position.y=d));
+  roofGrp.position.y=v*14;};
+
+window.resetCam=function(){camera.position.set(55,38,55);ctrl.target.copy(CENTER);ctrl.update();};
+
+let wireOn=false;
+window.wire=function(){wireOn=!wireOn;intWallMats.forEach(m=>m.wireframe=wireOn);M.extWall.wireframe=wireOn;};
+
+let soloK=null;
+window.solo=function(){
+  const keys=['bsmt','main','upper'];
+  if(!soloK){soloK='main';}else{soloK=keys[(keys.indexOf(soloK)+1)%3];}
+  keys.forEach(k=>{groups[k].visible=k===soloK;document.getElementById('b-'+k).classList.toggle('on',k===soloK);});};
+
+/* ══════════════════ KEYBOARD ══════════════════ */
+document.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(k==='1')tog('bsmt');else if(k==='2')tog('main');else if(k==='3')tog('upper');
+  else if(k==='4')tog('roof');else if(k==='r'||k==='R')resetCam();
+  else if(k==='w'&&!e.ctrlKey)wire();else if(k==='t'||k==='T')vw('top');
+  else if(k==='f'&&!e.ctrlKey)vw('front');
+});
+
+/* ══════════════════ RESIZE ══════════════════ */
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+/* ══════════════════ ANIMATE ══════════════════ */
+function animate(){requestAnimationFrame(animate);ctrl.update();renderer.render(scene,camera);}
+
+// Intro dolly
+(function(){const start=new THREE.Vector3(85,55,85),end=new THREE.Vector3(55,38,55),t0=Date.now();
+  function intro(){const t=Math.min(1,(Date.now()-t0)/2200),e=1-Math.pow(1-t,3);
+    camera.position.lerpVectors(start,end,e);ctrl.update();if(t<1)requestAnimationFrame(intro);else animate();}
+  intro();
+})();
+</script>
+</body>
+</html>
