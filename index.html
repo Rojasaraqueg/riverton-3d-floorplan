@@ -40,11 +40,52 @@ canvas{display:block}
   box-shadow:0 2px 12px rgba(0,0,0,.1)}
 #rinfo h4{color:#1565C0;margin-bottom:3px;font-size:14px;font-weight:700}
 #rinfo .d{color:#777;font-size:11px;margin:1px 0}
+/* Mobile toggle button */
+#mob-tog{display:none;position:absolute;top:10px;left:10px;width:40px;height:40px;border-radius:10px;
+  background:rgba(255,255,255,.94);border:1px solid #ddd;cursor:pointer;z-index:20;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);font-size:20px;color:#1565C0;line-height:40px;text-align:center}
+#mob-tog:active{background:#E3F2FD}
+/* Mobile bottom bar */
+#mob-bar{display:none;position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);
+  border-top:1px solid #e0e0e0;padding:6px 8px;z-index:20;backdrop-filter:blur(8px);
+  box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+#mob-bar .row{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+#mob-bar .mb{padding:6px 10px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:6px;
+  color:#666;cursor:pointer;font-size:11px;font-weight:600;transition:.15s;flex:0 0 auto}
+#mob-bar .mb.on{background:#E3F2FD;border-color:#90CAF9;color:#1565C0}
+#mob-bar .mb:active{background:#ddd}
+@media(max-width:768px){
+  #panel{display:none;top:56px;left:8px;width:185px;z-index:25}
+  #panel.open{display:block}
+  #mob-tog{display:block}
+  #mob-bar{display:block}
+  #title{font-size:11px;padding:6px 14px;top:10px;max-width:calc(100% - 120px)}
+  #info{display:none}
+  #rinfo{bottom:auto;top:56px;right:8px;font-size:11px;min-width:140px;padding:8px 12px}
+  .card{padding:10px;margin-bottom:6px}
+  .card:last-child{display:none}
+  .fb{padding:5px 8px;font-size:11px;margin:2px 0}
+  .vb{padding:4px 7px;font-size:9px}
+  .sr label{font-size:10px;min-width:50px}
+}
 </style>
 </head>
 <body>
 <div id="hud">
-  <div id="title"><b>2853 W 12075 S, Riverton, UT 84065</b> — Habitat Builders / FastDesign</div>
+  <div id="title"><b>2853 W 12075 S, Riverton, UT 84065</b> — Habitat Builders</div>
+  <div id="mob-tog" onclick="document.getElementById('panel').classList.toggle('open');this.textContent=this.textContent==='☰'?'✕':'☰'">☰</div>
+  <div id="mob-bar">
+    <div class="row">
+      <button class="mb on" id="mb-bsmt" onclick="tog('bsmt');this.classList.toggle('on')">Basement</button>
+      <button class="mb on" id="mb-main" onclick="tog('main');this.classList.toggle('on')">Main</button>
+      <button class="mb on" id="mb-upper" onclick="tog('upper');this.classList.toggle('on')">Upper</button>
+      <button class="mb" id="mb-roof" onclick="tog('roof');this.classList.toggle('on')">Roof</button>
+      <button class="mb" onclick="vw('top')">Top</button>
+      <button class="mb" onclick="vw('3d')">3D</button>
+      <button class="mb" onclick="solo()">Solo</button>
+      <button class="mb" onclick="resetCam()">Reset</button>
+    </div>
+  </div>
   <div id="panel">
     <div class="card">
       <h2>Pisos</h2>
@@ -74,7 +115,7 @@ canvas{display:block}
       Teclas: 1-4 pisos | R reset | W wire | T top
     </div>
   </div>
-  <div id="info">Orbitar: Click Izq &nbsp;|&nbsp; Pan: Click Der &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Click cuarto = info</div>
+  <div id="info">Orbitar: Click Izq &nbsp;|&nbsp; Pan: Click Der &nbsp;|&nbsp; Zoom: Scroll &nbsp;|&nbsp; Tap cuarto = info</div>
   <div id="rinfo"><h4 id="rn"></h4><div class="d" id="rd"></div><div class="d" id="ra"></div><div class="d" id="rf"></div></div>
 </div>
 
